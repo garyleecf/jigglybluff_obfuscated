@@ -1,7 +1,7 @@
 # Jigglybluff's Final Submission: Ozzy Mozzy
 Tournament Submission
 
-(Code has been obfuscated until further review before public release.)
+(Code has been obfuscated until further review before public release. This was obfuscated with pyarmor with Python version 3.7.5, and have platforms set for Windows, Linux and Mac (Darwin) x86_64.)
 
 Note: Jigglybluff's bot performs precise tick-by-tick planning and execution, and therefore may require some minimal amount of compute resources to run properly (typically, an i5 or i7 core computer not running any other intensive processes should do the trick).
 When running this bot, if you ever see the print out: "Skipped a Tick", it is likely performing suboptimally.
