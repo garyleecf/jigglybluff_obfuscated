@@ -1,6 +1,7 @@
 '''
 BombMapper
 '''
+
 # import any external packages by un-commenting them
 # if you'd like to test / request any additional packages - please check with the Coder One team
 import random
@@ -40,7 +41,7 @@ class BombMapper:
                     self.opp_bombs.append(Bomb(b,35))
                 else:
                     print("Uhhhhhh")
-                    
+
         self.exploded_bombs = []
         del_idx = []
         for bomb in self.bombs:
@@ -51,6 +52,7 @@ class BombMapper:
                 del_idx.append(self.bombs.index(bomb))
             elif bomb.ttl == 0:
                 self.exploded_bombs.append(bomb)
+
         for bomb in self.player_bombs:
             bomb.ttl = min(bomb.ttl-1,self.timeleft()[bomb.pos]) if self.timeleft()[bomb.pos] >= 0 else self.timeleft()[bomb.pos]
         for bomb in self.opp_bombs:

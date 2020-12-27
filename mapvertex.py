@@ -1,6 +1,7 @@
 '''
 Map Vertex
 '''
+
 # import any external packages by un-commenting them
 # if you'd like to test / request any additional packages - please check with the Coder One team
 import random

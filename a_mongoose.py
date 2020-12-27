@@ -26,6 +26,7 @@ it will thrash and struggle, and its haunting voice will echo in your head for e
 "RUNNNNNNN BEFORE IT'S TOO LATEEEE"
 
 '''
+
 # import any external packages by un-commenting them
 # if you'd like to test / request any additional packages - please check with the Coder One team
 import random
@@ -35,7 +36,6 @@ import numpy as np
 # import sklearn
 from copy import deepcopy
 
-from .pathfinder import *
 from .bombmapper import *
 from .oremapper import *
 from .mapvertex import *
@@ -44,8 +44,6 @@ from .utils import *
 _DEBUG_PRINT = False
 
 class Agent:
-    #ACTION_PALLET = ['', 'u','d','l','r','p']
-
     def __init__(self):
         self.name = "ARGHHHHH"
         self.bombmapper = BombMapper()
@@ -103,12 +101,10 @@ class Agent:
 
         #Get all valid actions
         valid_actions, game_map = get_valid_actions(player_state, game_map, bomb_list)
-        #bomb_map = get_bomb_map(game_state, game_map, bomb_list, self.bombmapper.exploded_bombs)
         bomb_map = get_bomb_map(game_state, game_map, bomb_list, [])
         #If standing in the path of a bomb, gtfo
         if bomb_map[player_pos] == 1 or bomb_map[player_pos] == 2:
             lost_health = True
-        #print(bomb_map.T[::-1])
         safe_tile_exists = False
         for tile in neighbouring_tiles(player_pos)[0]:
             if (bomb_map[tile] == 0 or bomb_map[tile] >= 2) and game_map[tile] not in blockages:
@@ -220,7 +216,6 @@ class Agent:
         opp_dist = 1e5
         for vertex in available_tiles:
             if hamming_dist(vertex.pos, opp_pos) == 1:
-            # if np.linalg.norm(np.array(vertex.pos) - np.array(opp_pos)) == 1:
                 opp_vertex = Vertex(opp_pos,vertex.dist+1,available_tiles.index(vertex),1)
                 opp_dist = vertex.dist + 1
                 available_tiles.append(opp_vertex)
@@ -233,7 +228,6 @@ class Agent:
         if self.trap_opp_cooldown == 0 and should_trap_opp(game_state,game_map,opp_dist,opp_vertex,available_tiles):
             if _DEBUG_PRINT:
                 print("TRAP OPP")
-            #print(bomb_map.T[::-1],"\n")
             action = move_to_vertex(opp_vertex,available_tiles)
             if action not in valid_actions:
                 if 'p' in valid_actions:
@@ -260,22 +254,6 @@ class Agent:
                 print("RUNNNNNNN")
             im_trapped = True
 
-        '''
-        if opp_dist <= 6:
-            #print(opp_dist)
-            for i in range(int(opp_dist//2)+1):
-                temp_game_map = deepcopy(game_map)
-                prev = available_tiles.index(opp_vertex)
-                for j in range(i):
-                    prev = available_tiles[prev].prev
-                temp_game_map[available_tiles[prev].pos] = 3
-                if len(get_available_tiles(game_state,player_pos,temp_game_map,max_depth=7)) <= 5 and i <= opp_dist - i:
-                    #print(len(get_available_tiles(game_state,player_pos,temp_game_map)))
-                    im_trapped = True
-                    if _DEBUG_PRINT:
-                        print("I'M TRAPPED")
-                    break
-        '''
         walls = 1*np.logical_or(game_map==block_type.SOFT_BLOCKS, game_map==block_type.ORE_BLOCKS)
         if self.oremapper.oremap is not None:
             for ore in game_state.ore_blocks:
@@ -301,11 +279,6 @@ class Agent:
         elif len(treasure_list) > 0 and (nearest_dist[2] > 3 or opp_dist <= 3) and (treasure_list[0].dist <= 10 or len(reward_list_1+reward_list_2+reward_list_3) == 0):
             action = move_to_vertex(treasure_list[0],available_tiles)
         else:
-            #Boomers go boom
-            #If I'm standing on a bomb, then the distance of the nearest reward tile cannot be 0
-
-            #print(nearest_dist)
-            #print(get_reward_map(game_state,game_map,ore_map).T[::-1])
             if sum(nearest_dist) == 3e5:
                 action = centralise(game_state,game_map,player_pos,available_tiles,bomb_map)
             elif min(nearest_dist) == 0:
@@ -341,59 +314,9 @@ class Agent:
 
         gonna_be_trapped = False
         if not im_trapped and opp_dist <= 6 and not trap_opp:
-            '''
-            temp_game_map = deepcopy(game_map)
-            temp_game_map[game_state.player_pos] = 0 if temp_game_map[game_state.player_pos] == 1 else 8
-            temp_game_map[game_state.opp_pos] = 0 if temp_game_map[game_state.player_pos] == 2 else 8
-            temp_opp_pos = available_tiles[opp_vertex.prev].pos
-            if temp_opp_pos == player_pos:
-                temp_opp_pos = opp_pos
-            temp_player_pos = resultant_tile(player_pos,action)
-            if temp_player_pos == temp_opp_pos or temp_player_pos == opp_pos:
-                temp_player_pos = player_pos
-            temp_game_map[temp_player_pos] = 1
-            temp_game_map[temp_opp_pos] = 2
-            temp_available_tiles = get_available_tiles(game_state,temp_player_pos,temp_game_map)
-            temp_game_state = deepcopy(game_state)
-            temp_game_state.player_pos = temp_player_pos
-            temp_game_state.opp_pos = temp_opp_pos
-            temp_opp_vertex = temp_available_tiles[0]
-            temp_opp_dist = 1e5
-            for vertex in temp_available_tiles:
-                if hamming_dist(vertex.pos, temp_opp_pos) == 1:
-                # if np.linalg.norm(np.array(vertex.pos) - np.array(opp_pos)) == 1:
-                    temp_opp_vertex = Vertex(temp_opp_pos,vertex.dist+1,temp_available_tiles.index(vertex),1)
-                    temp_opp_dist = vertex.dist + 1
-                    temp_available_tiles.append(temp_opp_vertex)
-                    break
-            if should_escape(temp_game_state,temp_game_map,temp_opp_dist,temp_opp_vertex,temp_available_tiles):
-                print("RUNNNNNNN BEFORE IT'S TOO LATEEEE")
-                gonna_be_trapped = True
-            '''
             if action_is_trappable(game_state,game_map,action):
                 print("RUNNNNNNN BEFORE IT'S TOO LATEEEE")
                 gonna_be_trapped = True
-            '''
-            for i in range(int(opp_dist//2)+3):
-                temp_game_map = deepcopy(game_map)
-                temp_game_map[player_pos] = 0 if temp_game_map[player_pos] == 1 else 8
-                prev = available_tiles.index(opp_vertex)
-                for j in range(i):
-                    prev = available_tiles[prev].prev
-
-                temp_game_map[available_tiles[prev].pos] = 3
-                if len(get_available_tiles(game_state,resultant_tile(player_pos,action),temp_game_map,max_depth=8)) <= 6 and i <= opp_dist+2-i:
-                    #print(len(get_available_tiles(game_state,player_pos,temp_game_map)))
-                    im_trapped = True
-                    if action != move_to_vertex(opp_vertex,available_tiles):
-                        action = move_to_vertex(opp_vertex,available_tiles)
-                    else:
-                        action = ''
-                    if _DEBUG_PRINT:
-                        print(f"I'M ABOUT TO BE TRAPPED: Position {player_state.location}, Opp Distance:{opp_dist}")
-                    break
-            '''
-
 
         #Ensure the actions chosen above does not lead to being trapped in a dead end, or walking past an exploding bomb
         skrrrting = False
@@ -470,7 +393,6 @@ class Agent:
         if skrrrted and opp_pos == self.skrrrt_pos:
             action = ''
 
-        #print(temp_bomb_map.T[::-1],"\n",game_map.T[::-1],"\n")
         action_space={}
         if bomb_map[resultant_tile(player_pos,action)] <= 2 and bomb_map[resultant_tile(player_pos,action)] > 0:
             #print("Walking into bomb")
@@ -495,7 +417,6 @@ class Agent:
                     print("NOOOOOOOOOOOOOOOOOOOO")
                 #action = ''
                 return advanced_gtfo(game_state, player_pos, game_map, bomb_map, valid_actions)
-        #print("*",action,action_space[action])
 
         if ((not safe_to_bomb(available_tiles,player_pos,game_map)) or im_trapped or (get_available_tiles(game_state,player_pos,game_map,max_L1_dist=1)==2 and opp_dist==2)) and action == 'p':
             if len(available_tiles) >= 4 and self.idle is not None and game_state.tick_number-self.idle >= 40:
@@ -506,7 +427,6 @@ class Agent:
             else:
                 if _DEBUG_PRINT:
                     print("Don't be stupid!")
-                #action = ''
                 return advanced_gtfo(game_state, player_pos, game_map, bomb_map, valid_actions)
         temp_game_map = deepcopy(game_map)
         temp_game_map[player_pos] = 0 if temp_game_map[player_pos] == 1 else 8
@@ -515,8 +435,6 @@ class Agent:
             action = move_to_vertex(opp_vertex,available_tiles)
             if opp_dist == 1e5 and action == '':
                 return advanced_gtfo(game_state, player_pos, game_map, bomb_map, valid_actions)
-        #elif len(available_tiles) <= 3 and bomb_map[player_pos] >= 8:
-        #    action = ''
 
         if im_trapped and action == 'p':
             temp_game_map = deepcopy(game_map)

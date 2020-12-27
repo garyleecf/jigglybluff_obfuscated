@@ -140,9 +140,6 @@ def get_available_tiles(game_state, start_coord, game_map, ore_map=None, owned_b
 def get_reward_map(game_state,game_map,ore_map,owned_bombs,ammo_count):
     reward_map = np.zeros(game_map.shape,dtype=np.int8)
     walls = 1*np.logical_or(game_map==block_type.SOFT_BLOCKS, game_map==block_type.ORE_BLOCKS)
-    # np.array([1*(i%6>=4) for i in game_map])
-    # opp = game_state.opp_pos
-    # walls[opp] = 0
 
     ore_list = game_state.ore_blocks
     if ore_map is None:
@@ -155,10 +152,7 @@ def get_reward_map(game_state,game_map,ore_map,owned_bombs,ammo_count):
 
 
     bombs = 1*(game_map>=block_type.BOMB)
-    # bombs = np.array([1*(i>7) for i in game_map])
     bomb_list = game_state.bombs
-    #print(walls.T[::-1])
-    #print(bombs.T[::-1])
     player_bombs = [bomb.pos for bomb in owned_bombs[0]]
     opp_bombs = [bomb.pos for bomb in owned_bombs[1]]
     all_bombs = owned_bombs[0] + owned_bombs[1]
@@ -213,7 +207,6 @@ def get_reward_map(game_state,game_map,ore_map,owned_bombs,ammo_count):
     for ammo in ammo_list:
         reward_map[ammo] = 51
 
-    #print(reward_map.T[::-1])
     player_pos = game_state.player_pos
     if game_state.entity_at(player_pos) == 'b':
         reward_map[player_pos] = 0
@@ -248,7 +241,6 @@ def get_reward_map(game_state,game_map,ore_map,owned_bombs,ammo_count):
                                 elif coord in opp_bombs:
                                     ttl2 = owned_bombs[1][opp_bombs.index(coord)].ttl
                                 else:
-                                    #Heck it
                                     pass
                                 if ttl1 > ttl2 + 2:
                                     reward_map[treble_reward] -= 11
@@ -304,45 +296,12 @@ def get_reward_map(game_state,game_map,ore_map,owned_bombs,ammo_count):
                     if len(snipeable_tiles) == 1 and tile_bombs[0].pos in opp_bombs:
                         reward_map[snipeable_tiles[0]] += 1
 
-    #print(ore_map.T[::-1])
-    #print(walls.T[::-1])
+
     for coord in game_state.all_blocks + game_state.bombs + [game_state.opp_pos]:
         reward_map[coord] = 0
-    #print(reward_map.T[::-1],"\n")
     if reward_map.sum() == 0 and False:
         for tile in neighbouring_tiles(game_state.opp_pos)[0]:
             reward_map[tile] = 1
-
-    '''
-    #Feature to conserve ammo for ores
-    if len(np.where(reward_map > 1)[0]) == 0:
-        temp_game_map = np.array([1*(i==3) for i in game_map])
-        reachable_ores = [vertex.pos for vertex in get_available_tiles(game_state, game_state.player_pos, temp_game_map)]
-        ores_are_reachable = False
-        for ore in ore_list:
-            if ore in reachable_ores:
-                ores_are_reachable = True
-                break
-        if ores_are_reachable:
-            if ammo_count < 3:
-                reward_map = np.zeros(game_map.shape,dtype=np.int8)
-            else:
-                for ore in ore_list:
-                    for tile in neighbouring_tiles(ore,steps=2)[0]:
-                        if reward_map[tile] >= 1:
-                            reward_map[tile] += 1
-    else:
-        important_ores = []
-        temp_reward_map = np.zeros(reward_map.shape,dtype=np.int8)
-        for ore in ore_list:
-            if walls[ore] == 1:
-                for tile in neighbouring_tiles(ore,steps=2)[0]:
-                    temp_reward_map[tile] = reward_map[tile]
-        if temp_reward_map.sum() > 0:
-            reward_map = temp_reward_map
-    '''
-    # print(reward_map.T[::-1],"\n")
-
     return reward_map
 
 
@@ -397,7 +356,6 @@ def move_to_vertex(target,vertex_list):
     else:
         while vertex_list[prev].prev != 0:
             prev = vertex_list[prev].prev
-            #print(prev,vertex.pos)
         action = get_direction(vertex_list[0].pos,vertex_list[prev].pos)
     return action
 
@@ -437,14 +395,14 @@ def get_bomb_map(game_state, game_map, bomb_list, exploded_bomb_list):
         for coord in neighbouring_tiles(bomb.pos, steps=2)[0] + [bomb.pos]:
             if in_bomb_range(bomb.pos, coord, game_map):
                 if bomb_map[coord] > 0:
-                    bomb_map[coord] = min(bomb_map[coord],bomb.ttl+1)# if bomb_map[coord] > 1 else bomb.ttl+1
+                    bomb_map[coord] = min(bomb_map[coord],bomb.ttl+1)
                 elif bomb_map[coord] == 0:
                     bomb_map[coord] = bomb.ttl+1
         if in_bomb_range(bomb.pos, player_pos, game_map):
             if bomb_map[player_pos] == 0:
                 bomb_map[player_pos] = bomb.ttl+1
             else:
-                bomb_map[player_pos] = min(bomb_map[player_pos], bomb.ttl+1)# if bomb_map[coord] > 1 else bomb.ttl+1
+                bomb_map[player_pos] = min(bomb_map[player_pos], bomb.ttl+1)
     return bomb_map
 
 
@@ -464,7 +422,6 @@ def get_bomb_list(game_state, bombs, player_state):
             for n in neighbours[b]:
                 if bombs[b].ttl > bombs[n].ttl + 1:
                     updated = True
-                    #print(bombs[b].pos,"\t",bombs[b].ttl)
                     bombs[b].ttl = bombs[n].ttl + 1
 
     sb = np.zeros((len(bombs),2),dtype=int)
@@ -473,7 +430,6 @@ def get_bomb_list(game_state, bombs, player_state):
         sb[idx,1] = idx
     sb = sb[sb[:,0].argsort()]
     sorted_bombs = [bombs[i] for i in sb[:,1]]
-    #print(sb[:,1])
     return deepcopy(sorted_bombs), game_map
 
 def safe_to_bomb(vertex_list, player_pos, game_map):
@@ -503,8 +459,6 @@ def gtfo(game_state, valid_actions, bomb_map, game_map, player_pos):
     actions = np.array(actions,dtype=np.int8)
     actions = actions[actions[:,0].argsort()][::-1]
     action = remaining_actions[actions[0,1]]
-    # print("gtfo action", action)
-    # print(bomb_map)
     return action
 
 
@@ -520,13 +474,8 @@ def advanced_gtfo(game_state, player_pos, game_map, bomb_map, valid_actions):
                 action = move_to_vertex(vertex,available_tiles)
         return action
     available_tiles = get_available_tiles(game_state,player_pos,game_map,max_L1_dist=1)
-    #dist_map = np.zeros(game_map.shape, dtype=np.int8)
-    #for vertex in available_tiles:
-    #    dist_map[vertex.pos] = vertex.dist
-    #print(dist_map.T[::-1])
     action = None
     for vertex in available_tiles:
-        #print(bomb_map[vertex.pos],vertex.pos)
         if (bomb_map[vertex.pos] == 0 or bomb_map[vertex.pos] > 5) and not death_trap(vertex.pos,game_map):
             action = move_to_vertex(vertex,available_tiles)
 
@@ -537,15 +486,12 @@ def advanced_gtfo(game_state, player_pos, game_map, bomb_map, valid_actions):
 
     if action == None:
         return gtfo(game_state,valid_actions,bomb_map,game_map,player_pos)
-    # print("advanced_gtfo action", action)
-    # print(bomb_map)
     return action
 
 
 def centralise(game_state, game_map, player_pos, vertex_list, bomb_map):
     if game_state.opp_pos == vertex_list[-1].pos and vertex_list[-1].dist > 2:
         return move_to_vertex(vertex_list[-1],vertex_list)
-
     action = ''
     space = 0
     action_space={}
@@ -562,12 +508,6 @@ def centralise(game_state, game_map, player_pos, vertex_list, bomb_map):
             for vertex in get_available_tiles(game_state,vertex.pos,temp_game_map,max_L1_dist=30)[1:]:
                 at_sum += (1+vertex.tile_type)/(vertex.dist+1)**2
             action_space[a] = at_sum
-
-    #if game_map[player_pos] != 9 and bomb_map[player_pos] <= 0:
-    #    at_sum = 0
-    #    for vertex in get_available_tiles(game_state,player_pos,temp_game_map,max_L1_dist=30):
-    #        at_sum += 1/(vertex.dist+1)**2
-    #    action_space[''] = at_sum
     for a in action_space:
         if action_space[a] > space:
             action = a
@@ -600,7 +540,6 @@ def should_escape(game_state,game_map,opp_dist,opp_vertex,available_tiles):
         cur_vertex = deepcopy(available_tiles[cur_idx])
         pathing.append(cur_vertex)
     pathing.append(available_tiles[0])
-    #print([p.pos for p in pathing])
     for i in range(int(-(-len(pathing)//2))):
         j = len(pathing)-i-1
         if j == i:
@@ -609,7 +548,6 @@ def should_escape(game_state,game_map,opp_dist,opp_vertex,available_tiles):
         temp_game_map[game_state.player_pos] = 0 if temp_game_map[game_state.player_pos] == 1 else 8
         temp_game_map[game_state.opp_pos] = 0 if temp_game_map[game_state.opp_pos] == 2 else 9
         temp_game_map[pathing[i].pos] = 3
-        #print([tile.pos for tile in  get_available_tiles(game_state,pathing[j].pos,temp_game_map,max_depth=8)])
         if len(get_available_tiles(game_state,pathing[j].pos,temp_game_map,max_depth=8)) <= 6:
             return True
     return False
@@ -654,8 +592,6 @@ def action_is_trappable(game_state,game_map,action):
         temp_opp_pos = pathing[-1].pos
         temp_game_map[game_state.opp_pos] = 0 if game_map[game_state.opp_pos] == 2 else 9
         temp_game_map[temp_opp_pos] = 2
-
-    #print((game_state.player_pos,game_state.opp_pos),(temp_player_pos,temp_opp_pos))
 
     temp_game_state = deepcopy(game_state)
     temp_game_state.player_pos = temp_player_pos
